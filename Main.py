@@ -7,6 +7,11 @@ import time
 import collections
 import IPUtils as Util
 import threading
+import UserQueries
+import sys
+
+# Denotes whether to capture live packets or not
+live = True
 
 '''
 This code uses the following variables:
@@ -26,10 +31,16 @@ ip_port_dict = {}
 def callback(packet_length, data, timestamp):
     PacketParser.load_packet(data[14:], timestamp, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict)
 
-# Load all packets into memory
-PacketSniffer.intercept_packets_live(callback, "eth0")
+if live:
+    # Load packets into memory in different thread
+    intercept_thread = threading.Thread(target=PacketSniffer.intercept_packets_live, args=(callback, "eth0"))
+    intercept_thread.setDaemon(True)
+    intercept_thread.start()
+    try:
+        UserQueries.interact(ip_dict, port_dict, ip_to_ip_dict, ip_port_dict)
+    except KeyboardInterrupt:
+        sys.exit()
 
-
-##############################
-# Place PcapUtils Queries here
-##############################
+else:
+    PacketSniffer.intercept_packets(callback, "packets/smallFlows.pcap")
+    # Insert code for packets here

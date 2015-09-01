@@ -1,30 +1,12 @@
 __author__ = 'matan'
 
 from socket import IPPROTO_TCP
-import IPUtils as Util
-
-
-'''
-def get_info(packet_length, data, timestamp):
-    decoded = parse_packet(data[14:])
-    return decoded
-
-
-def parse_packet(data):
-    d = {}
-    d['protocol'] = ord(data[9])
-    d['source_address'] = pcap.ntoa(struct.unpack('i', data[12:16])[0])
-    d['destination_address'] = pcap.ntoa(struct.unpack('i', data[16:20])[0])
-    d['source_port'] = struct.unpack('H', data[20:22])
-    d['destination_port'] = struct.unpack('H', data[22:24])
-    return d
-'''
 
 
 def update_tcp_session(source_ip, destination_ip, source_port, destination_port, ip_port_dict, timestamp, tcp_flags):
     # Create dictionary keys
-    key1 = source_ip + destination_ip + source_port + destination_port
-    key2 = destination_ip + source_ip + destination_port + source_port
+    key1 = source_ip, destination_ip, source_port, destination_port
+    key2 = destination_ip, source_ip, destination_port, source_port
 
     if key1 in ip_port_dict:
         value = ip_port_dict[key1]

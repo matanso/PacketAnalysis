@@ -22,11 +22,21 @@ def ip_str_to_bytes(ip):
     """
     Converts a string representation of an ip to a bytes object
     """
-    return struct.pack('i', (pcap.aton(ip),))
+    return struct.pack('i', pcap.aton(ip))
 
 
 def port_int_to_bytes(port):
     """
     Converts a short representation of a port to a bytes object
     """
-    return struct.pack('H', (port,))
+    return struct.pack('H', port)
+
+
+def tcp_session_tuple_to_str(tup):
+    """
+
+    :param tup: a tuple as a result of PcapUtils.get_live_sessions
+    :return: A string
+    """
+    return ip_bytes_to_str(tup[0]) + ":" + str(port_bytes_to_int(tup[2])) + " --> " + \
+           ip_bytes_to_str(tup[1]) + ":" + str(port_bytes_to_int(tup[3]))
