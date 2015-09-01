@@ -40,3 +40,11 @@ def tcp_session_tuple_to_str(tup):
     """
     return ip_bytes_to_str(tup[0]) + ":" + str(port_bytes_to_int(tup[2])) + " --> " + \
            ip_bytes_to_str(tup[1]) + ":" + str(port_bytes_to_int(tup[3]))
+
+
+def ip_to_ip_make_key(ip1, ip2):
+    return ip1 + ip2
+
+
+def ip_port_make_key(ip1, ip2, port1, port2):
+    return ip1 + ip2 + port1 + port2

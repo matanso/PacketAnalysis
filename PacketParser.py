@@ -1,41 +1,53 @@
 __author__ = 'matan'
 
 from socket import IPPROTO_TCP
+import IPUtils as Util
 
 
 def update_tcp_session(source_ip, destination_ip, source_port, destination_port, ip_port_dict, timestamp, tcp_flags):
-    # Create dictionary keys
-    key1 = source_ip, destination_ip, source_port, destination_port
-    key2 = destination_ip, source_ip, destination_port, source_port
-
-    if key1 in ip_port_dict:
-        value = ip_port_dict[key1]
-        if not value[1]:
-            return
-
-        # Parse TCP flags
-        rst = tcp_flags & 0b00100000
-        fin = tcp_flags & 0b10000000
-
-        if rst or fin:  # Connection terminated
-            ip_port_dict[key1] = (0, False)
-            ip_port_dict[key2] = (0, False)
-            return
-
-        # Update last timestamp, connection still active
-
-        timestamp = max(value[0], timestamp)
-        ip_port_dict[key1] = (timestamp, True)
-        ip_port_dict[key2] = (timestamp, True)
-        return
+    # Create dictionary keys TODO: MakeKey function
+    key1 = Util.ip_port_make_key(source_ip, destination_ip, source_port, destination_port)
+    key2 = Util.ip_port_make_key(destination_ip, source_ip, destination_port, source_port)
 
     # Parse TCP flags
     ack = tcp_flags & 0b00001000
     syn = tcp_flags & 0b01000000
+    rst = tcp_flags & 0b00100000
+    fin = tcp_flags & 0b10000000
 
-    if not syn or ack:  # Connection established (SYN & ACK) or exists (not syn)
+    if key1 in ip_port_dict:    # Session recorded in memory
+
+        # Get the last state of this session
+        prev_timestamp, is_active = ip_port_dict[key1]
+
+        if not is_active:    # Session was active and was terminated.
+
+            # Check if session was established again with same IPs and ports after termination. Note that if we missed
+            # Syn/Ack response (on "revive") from the server, the session will be counted as inactive.
+            if syn and ack and timestamp > prev_timestamp:     # Session "revived"
+                ip_port_dict[key1] = (timestamp, True)
+                ip_port_dict[key2] = (timestamp, True)
+            return
+
+        if rst or fin:  # Connection terminated
+            ip_port_dict[key1] = (timestamp, False)
+            ip_port_dict[key2] = (timestamp, False)
+            return
+
+        # Update last timestamp, connection still active
+
+        timestamp = max(prev_timestamp, timestamp)
         ip_port_dict[key1] = (timestamp, True)
         ip_port_dict[key2] = (timestamp, True)
+        return
+
+    else:
+
+        # Session not in memory. Check if session was established
+        # TODO: Unfuck this section
+        if (ack or not syn) and not (fin or rst):  # Connection established (SYN & ACK) or already exists (not SYN)
+            ip_port_dict[key1] = (timestamp, True)
+            ip_port_dict[key2] = (timestamp, True)
 
 
 def load_packet(data, timestamp, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict):
@@ -48,12 +60,14 @@ def load_packet(data, timestamp, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict
     ip_dict[destination_ip].add(source_ip)
 
     # Create dictionary keys
-    ip_str = source_ip + destination_ip
-    other_ip_str = destination_ip + source_ip
+    ip_key1 = Util.ip_to_ip_make_key(source_ip, destination_ip)
+    ip_key2 = Util.ip_to_ip_make_key(destination_ip, source_ip)
 
     # Parse other info
-    source_port = data[20:22]
-    destination_port = data[22:24]
+    header_len = ord(data[0]) & 0x0f
+    tcp_offset = 4 * header_len
+    source_port = data[tcp_offset: tcp_offset + 2]
+    destination_port = data[tcp_offset + 2: tcp_offset + 4]
     protocol = data[9]
 
     # insert ports into port_dict
@@ -61,8 +75,8 @@ def load_packet(data, timestamp, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict
     port_dict[destination_ip].add(destination_port)
 
     # Insert ports used into ip_to_ip_dict
-    ip_to_ip_dict[ip_str].add((source_port, destination_port, protocol))
-    ip_to_ip_dict[other_ip_str].add((destination_port, source_port, protocol))
+    ip_to_ip_dict[ip_key1].add((source_port, destination_port, protocol))
+    ip_to_ip_dict[ip_key2].add((destination_port, source_port, protocol))
 
     # Check if tcp
     if ord(protocol) == IPPROTO_TCP:

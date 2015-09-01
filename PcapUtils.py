@@ -41,12 +41,17 @@ def communicated_with_ip_on_port(source_ip, destination_ip, port, ip_to_ip_dict)
     :param port: Port as bytes
     :return: Boolean
     """
-    return port == ip_to_ip_dict[source_ip + destination_ip][0]
+
+    # Get all ports used for communication between 2 IPs
+    # TODO: Optimize with new dict that maps 2 IPs -> port
+    ports = ip_to_ip_dict[Util.ip_to_ip_make_key(source_ip + destination_ip)]
+
+    return any(port == info[0] for info in ports)
 
 
 def get_live_sessions(ip_address, curr_timestamp, ip_dict, ip_to_ip_dict, ip_port_dict):
     """
-    Get all live TCP sessions for an IP addres
+    Get all live TCP sessions for an IP address
 
     :param ip_address: IP as bytes
     :return: list(tuples)
@@ -57,16 +62,18 @@ def get_live_sessions(ip_address, curr_timestamp, ip_dict, ip_to_ip_dict, ip_por
     for other_ip in ip_dict[ip_address]:
 
         # Iterate over all sessions between the IPs
-        for session in ip_to_ip_dict[ip_address + other_ip]:
+        for (source_port, destination_port, protocol) in ip_to_ip_dict[Util.ip_to_ip_make_key(ip_address, other_ip)]:
 
             # Generate dictionary key
-            key = ip_address, other_ip, session[0], session[1]
+            key = Util.ip_port_make_key(ip_address, other_ip, source_port, destination_port)
 
             # Check if session was a TCP session and if it was established
-            if ord(session[2]) == IPPROTO_TCP and key in ip_port_dict:
-                session_data = ip_port_dict[key]
+            if ord(protocol) == IPPROTO_TCP and key in ip_port_dict:
+
+                # Retrieve session data
+                prev_timestamp, is_active = ip_port_dict[key]
 
                 # Check if session wasn't terminated or timed out
-                if session_data[1] and curr_timestamp - session_data[0] < TCP_SESSION_TIMEOUT:
-                    res += [key]
+                if is_active and curr_timestamp - prev_timestamp < TCP_SESSION_TIMEOUT:
+                    res += [(ip_address, other_ip, source_port, destination_port)]
     return res
