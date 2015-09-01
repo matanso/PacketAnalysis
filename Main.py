@@ -6,6 +6,8 @@ import PcapUtils
 import time
 import collections
 import IPUtils as Util
+import threading
+
 '''
 This code uses the following variables:
 IP dict - a dict that maps an IP to a set of IPs it has communicated with
@@ -24,4 +26,10 @@ ip_port_dict = {}
 def callback(packet_length, data, timestamp):
     PacketParser.load_packet(data[14:], timestamp, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict)
 
-PacketSniffer.intercept_packets(callback, "packets/smallFlows.pcap")
+# Load all packets into memory
+PacketSniffer.intercept_packets_live(callback, "eth0")
+
+
+##############################
+# Place PcapUtils Queries here
+##############################

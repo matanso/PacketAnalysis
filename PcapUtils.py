@@ -4,7 +4,7 @@ __author__ = 'matan'
 from socket import IPPROTO_TCP
 import IPUtils as Util
 
-TCP_SESSION_TIMEOUT = 864000000
+TCP_SESSION_TIMEOUT = 864000
 
 
 def seen_before(ip, ip_dict):
