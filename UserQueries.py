@@ -3,6 +3,7 @@ __author__ = 'matan'
 import IPUtils as Util
 import PcapUtils
 import time
+import pcap
 
 
 def handle_query(query, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict):
@@ -14,7 +15,7 @@ def handle_query(query, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict):
 
     # IP-specific queries
     try:
-        ip = Util.ip_str_to_bytes(arr[1])
+        ip = pcap.aton(arr[1])
     except:
         print("Couldn't parse IP address " + arr[1])
         return
@@ -22,7 +23,7 @@ def handle_query(query, ip_dict, port_dict, ip_to_ip_dict, ip_port_dict):
     # Display all IPs that this IP has communicated with
     if arr[0] == "friends":
         for other in ip_dict[ip]:
-            print(Util.ip_bytes_to_str(other))
+            print(pcap.ntoa(other))
         print
 
     # List all live TCP sessions for IP
@@ -37,7 +38,7 @@ def list_live(ip, ip_dict, ip_to_ip_dict, ip_port_dict):
 
 def list_all(ip_dict):
     for ip in ip_dict:
-        print(Util.ip_bytes_to_str(ip))
+        print(pcap.ntoa(ip))
 
 
 def interact(ip_dict, port_dict, ip_to_ip_dict, ip_port_dict):
