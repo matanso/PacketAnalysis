@@ -28,7 +28,7 @@ def communicated(source_ip, destination_ip, ip_dict):
 def communicated_on_port(ip, port, port_dict):
     """
     :param ip: IP in bytes
-    :param port: Port in Bytes
+    :param port: (Port, protocol) Both in Bytes
     :return: Boolean
     """
     return port in port_dict[ip]
