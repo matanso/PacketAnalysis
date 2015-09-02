@@ -5,7 +5,7 @@ import IPUtils as Util
 
 
 def update_tcp_session(source_ip, destination_ip, source_port, destination_port, ip_port_dict, timestamp, tcp_flags):
-    # Create dictionary keys TODO: MakeKey function
+    # Create dictionary keys
     key1 = Util.ip_port_make_key(source_ip, destination_ip, source_port, destination_port)
     key2 = Util.ip_port_make_key(destination_ip, source_ip, destination_port, source_port)
 
@@ -15,7 +15,11 @@ def update_tcp_session(source_ip, destination_ip, source_port, destination_port,
     rst = tcp_flags & 0b00100000
     fin = tcp_flags & 0b10000000
 
-    if key1 in ip_port_dict:    # Session recorded in memory
+    if fin or rst:  # Connection was terminated
+        ip_port_dict[key1] = (timestamp, False)
+        ip_port_dict[key2] = (timestamp, False)
+
+    elif key1 in ip_port_dict:    # Session recorded in memory
 
         # Get the last state of this session
         prev_timestamp, is_active = ip_port_dict[key1]
@@ -27,25 +31,17 @@ def update_tcp_session(source_ip, destination_ip, source_port, destination_port,
             if syn and ack and timestamp > prev_timestamp:     # Session "revived"
                 ip_port_dict[key1] = (timestamp, True)
                 ip_port_dict[key2] = (timestamp, True)
-            return
-
-        if rst or fin:  # Connection terminated
-            ip_port_dict[key1] = (timestamp, False)
-            ip_port_dict[key2] = (timestamp, False)
-            return
 
         # Update last timestamp, connection still active
-
-        timestamp = max(prev_timestamp, timestamp)
-        ip_port_dict[key1] = (timestamp, True)
-        ip_port_dict[key2] = (timestamp, True)
-        return
+        else:
+            timestamp = max(prev_timestamp, timestamp)
+            ip_port_dict[key1] = (timestamp, True)
+            ip_port_dict[key2] = (timestamp, True)
 
     else:
 
         # Session not in memory. Check if session was established
-        # TODO: Unfuck this section
-        if (ack or not syn) and not (fin or rst):  # Connection established (SYN & ACK) or already exists (not SYN)
+        if ack or not syn:  # Connection established (SYN & ACK) or already exists (not SYN)
             ip_port_dict[key1] = (timestamp, True)
             ip_port_dict[key2] = (timestamp, True)
 
